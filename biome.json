@@ -1,0 +1,104 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.css",
+      "!**/node_modules/*",
+      "!**/dist/*",
+      "!**/package-lock.json",
+      "!**/yarn.lock",
+      "!**/*.min.js",
+      "!**/*.min.css"
+    ]
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "formatter": {
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.css",
+      "!**/node_modules/**",
+      "!**/dist/**",
+      "!**/package-lock.json",
+      "!**/yarn.lock",
+      "!**/*.min.js",
+      "!**/*.min.css"
+    ],
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "lineEnding": "lf"
+  },
+  "linter": {
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.css",
+      "!**/node_modules/**",
+      "!**/dist/**",
+      "!**/package-lock.json",
+      "!**/yarn.lock",
+      "!**/*.min.js",
+      "!**/*.min.css"
+    ],
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "javascript": {
+    "linter": {
+      "enabled": true
+    },
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "jsxQuoteStyle": "single",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "trailingCommas": "all"
+    }
+  },
+  "css": {
+    "formatter": {
+      "indentStyle": "space",
+      "enabled": true,
+      "lineWidth": 80,
+      "indentWidth": 2,
+      "lineEnding": "lf"
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": true,
+      "indentWidth": 2
+    }
+  }
+}
