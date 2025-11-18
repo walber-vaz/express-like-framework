@@ -1,12 +1,12 @@
 import {
   cors,
   createApp,
-  logger,
   helmet,
-  validate,
-  z,
+  logger,
   type RequestContext,
   type ResponseContext,
+  validate,
+  z,
 } from '../dist/index.js';
 
 // Cria a aplicação
