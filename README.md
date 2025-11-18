@@ -496,6 +496,7 @@ npm run dev
 ```
 
 O arquivo `examples/basic.ts` demonstra:
+
 - Criação de aplicação com configuração
 - Rotas HTTP (GET, POST, PUT, DELETE)
 - Validação com Zod
@@ -631,6 +632,7 @@ Se você é desenvolvedor e quer contribuir:
 Se você é uma instância de Claude Code ou outro assistente de IA trabalhando neste projeto:
 
 **📘 Leia primeiro o arquivo [CLAUDE.md](./CLAUDE.md)** - Ele contém informações essenciais sobre:
+
 - Arquitetura do framework
 - Padrões de código
 - Problemas comuns e soluções
