@@ -6,13 +6,24 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
+    "test": "node --test --experimental-strip-types tests/**/*.test.ts",
+    "test:watch": "node --test --watch --experimental-strip-types tests/**/*.test.ts",
     "format": "biome format --write",
     "lint": "biome lint"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.3.6",
     "@types/node": "^24.10.1",
