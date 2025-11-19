@@ -1,4 +1,4 @@
-interface StringifyOptions {
+export interface StringifyOptions {
   replacer?: (
     this: unknown,
     key: string,
