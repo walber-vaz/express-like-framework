@@ -218,4 +218,3 @@ export const plugins = {
  * Re-export útil
  */
 export type { Plugin, PluginBuilder as PluginBuilderType };
-
