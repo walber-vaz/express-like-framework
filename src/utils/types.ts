@@ -85,6 +85,7 @@ export interface ResponseContext {
   headers: Headers;
   body?: unknown;
   raw: ServerResponse;
+  finished: boolean;
 
   // Helper methods
   status(code: HttpStatusCode): ResponseContext;
@@ -104,7 +105,7 @@ export type Handler<
   TQuery extends QueryParams = QueryParams,
   TBody = unknown,
 > = (
-  req: RequestContext & { params: TParams; query: TQuery; body: TBody },
+  req: RequestContext & { params: TParams; query: TQuery; body?: TBody },
   res: ResponseContext,
 ) => void | Promise<void>;
 
@@ -191,7 +192,11 @@ export interface ApplicationOptions {
   /**
    * Error handler customizado
    */
-  errorHandler?: (error: Error, req: any, res: any) => void | Promise<void>;
+  errorHandler?: (
+    error: Error,
+    req: RequestContext,
+    res: ResponseContext,
+  ) => void | Promise<void>;
 
   /**
    * Trust proxy headers (X-Forwarded-*)
