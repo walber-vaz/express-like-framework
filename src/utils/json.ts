@@ -23,11 +23,11 @@ export function stringify(
     return json.replace(/[<>&]/g, (c) => {
       switch (c.charCodeAt(0)) {
         case 0x3c: // <
-          return '\u003c';
+          return '\\u003c';
         case 0x3e: // >
-          return '\u003e';
+          return '\\u003e';
         case 0x26: // &
-          return '\u0026';
+          return '\\u0026';
         default:
           return c;
       }
