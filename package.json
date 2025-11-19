@@ -9,7 +9,8 @@
     "test": "node --test --experimental-strip-types tests/**/*.test.ts",
     "test:watch": "node --test --watch --experimental-strip-types tests/**/*.test.ts",
     "format": "biome format --write",
-    "lint": "biome lint"
+    "lint": "biome lint",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
