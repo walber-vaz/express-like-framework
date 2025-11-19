@@ -1,3 +1,4 @@
+import FindMyWay from 'find-my-way';
 import type {
   Handler,
   HttpMethod,
@@ -8,19 +9,50 @@ import type {
 } from '../utils/types.js';
 
 /**
- * Route match result
+ * Interface for the data stored with each route in find-my-way.
  */
-interface RouteMatch {
+interface RouteStore {
+  path: string;
+  handler: Handler;
+  middleware: Middleware[];
+  schema?: ValidationSchema;
+}
+
+/**
+ * Route match result for a successful match.
+ */
+export interface RouteMatchSuccess {
+  status: 'MATCH';
   route: Route;
   params: RouteParams;
 }
 
 /**
- * Router para gerenciar rotas e fazer pattern matching
+ * Route match result for a failed match.
+ */
+export interface RouteMatchFailure {
+  status: 'NOT_FOUND' | 'METHOD_NOT_ALLOWED';
+  allowedMethods?: HttpMethod[];
+}
+
+export type RouteMatchResult = RouteMatchSuccess | RouteMatchFailure;
+
+/**
+ * Router para gerenciar rotas e fazer pattern matching usando find-my-way.
  */
 export class Router {
-  private routes: Route[] = [];
+  private fmw: FindMyWay.Instance<FindMyWay.HTTPVersion.V1>;
   private globalMiddleware: Middleware[] = [];
+  private routeCounter = 0;
+
+  constructor() {
+    this.fmw = FindMyWay({
+      allowUnsafeRegex: true,
+      caseSensitive: false,
+      ignoreTrailingSlash: true,
+      defaultRoute: () => {},
+    });
+  }
 
   /**
    * Registra um middleware global (aplicado a todas as rotas)
@@ -34,7 +66,7 @@ export class Router {
    * Registra uma rota
    */
   public addRoute(
-    method: HttpMethod,
+    method: HttpMethod | HttpMethod[],
     path: string,
     handler: Handler,
     options: {
@@ -42,14 +74,18 @@ export class Router {
       schema?: ValidationSchema;
     } = {},
   ): this {
-    this.routes.push({
-      method: method.toUpperCase() as HttpMethod,
-      path: this._normalizePath(path),
+    const store: RouteStore = {
+      path,
       handler,
       middleware: options.middleware || [],
       schema: options.schema,
-    });
+    };
 
+    // Cast handler to `any` to satisfy find-my-way's strict typing.
+    // This is safe because fmw only stores the handler, it doesn't execute it.
+    // The actual execution happens in `application.ts` with the correct types.
+    this.fmw.on(method, path, handler as any, store);
+    this.routeCounter++;
     return this;
   }
 
@@ -115,143 +151,87 @@ export class Router {
   /**
    * Encontra uma rota que corresponde ao método e path
    */
-  public match(method: HttpMethod, path: string): RouteMatch | null {
-    const normalizedPath = this._normalizePath(path);
-
-    for (const route of this.routes) {
-      if (route.method !== method.toUpperCase()) {
-        continue;
-      }
-
-      const params = this._matchPath(route.path, normalizedPath);
-      if (params !== null) {
-        return {
-          route: {
-            ...route,
-            // Combina middleware global com middleware da rota
-            middleware: [...this.globalMiddleware, ...route.middleware],
-          },
-          params,
-        };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Verifica se existe alguma rota para o path (qualquer método)
-   */
-  public hasPath(path: string): boolean {
-    const normalizedPath = this._normalizePath(path);
-
-    for (const route of this.routes) {
-      const params = this._matchPath(route.path, normalizedPath);
-      if (params !== null) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Retorna todos os métodos HTTP disponíveis para um path
-   */
-  public getAllowedMethods(path: string): HttpMethod[] {
-    const normalizedPath = this._normalizePath(path);
-    const methods: HttpMethod[] = [];
-
-    for (const route of this.routes) {
-      const params = this._matchPath(route.path, normalizedPath);
-      if (params !== null) {
-        methods.push(route.method);
-      }
-    }
-
-    return methods;
-  }
-
-  /**
-   * Normaliza path (remove trailing slash, garante leading slash)
-   */
-  private _normalizePath(path: string): string {
-    if (!path || path === '/') return '/';
-
-    // Remove trailing slash
-    let normalized = path.replace(/\/+$/, '');
-
-    // Garante leading slash
-    if (!normalized.startsWith('/')) {
-      normalized = `/${normalized}`;
-    }
-
-    return normalized;
-  }
-
-  /**
-   * Faz match de um pattern contra um path e extrai parâmetros
-   * Suporta:
-   * - Parâmetros: /users/:id -> /users/123
-   * - Wildcard: /files/* -> /files/foo/bar.txt
-   * - Optional: /users/:id? -> /users ou /users/123
-   */
-  private _matchPath(pattern: string, path: string): RouteParams | null {
-    // Exact match
-    if (pattern === path) {
-      return {};
-    }
-
-    const params: RouteParams = {};
-
-    // Converte pattern para regex
-    let regexPattern = pattern
-      // Escape special regex chars except : and *
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-      // Named params: :name -> (?<name>[^/]+)
-      .replace(/:(\w+)\?/g, '(?<$1>[^/]+)?')
-      .replace(/:(\w+)/g, '(?<$1>[^/]+)')
-      // Wildcard: * -> .*
-      .replace(/\*/g, '.*');
-
-    // Adiciona anchors
-    regexPattern = `^${regexPattern}$`;
-
-    const regex = new RegExp(regexPattern);
-    const match = path.match(regex);
+  public match(method: HttpMethod, path: string): RouteMatchResult {
+    const match = this.fmw.find(method as FindMyWay.HTTPMethod, path);
 
     if (!match) {
-      return null;
+      // Se find-my-way não encontrou, verificamos se o path existe com outro método.
+      const allowedMethods = this.getAllowedMethods(path);
+      if (allowedMethods.length > 0) {
+        return {
+          status: 'METHOD_NOT_ALLOWED',
+          allowedMethods,
+        };
+      }
+      return { status: 'NOT_FOUND' };
     }
 
-    // Extrai named groups como parâmetros
-    if (match.groups) {
-      Object.assign(params, match.groups);
-    }
+    const { params, store } = match;
+    const routeStore = store as RouteStore;
 
-    return params;
+    return {
+      status: 'MATCH',
+      route: {
+        method: method.toUpperCase() as HttpMethod,
+        path: routeStore.path,
+        handler: routeStore.handler,
+        // Combina middleware global com middleware da rota
+        middleware: [...this.globalMiddleware, ...routeStore.middleware],
+        schema: routeStore.schema,
+      },
+      params,
+    };
   }
 
   /**
-   * Retorna todas as rotas registradas
+   * Retorna todos os métodos HTTP disponíveis para um path.
+   * NOTA: find-my-way não otimiza para isso. A implementação é para compatibilidade.
    */
-  public getRoutes(): Route[] {
-    return [...this.routes];
+  public getAllowedMethods(path: string): HttpMethod[] {
+    const methods: HttpMethod[] = [];
+    const supportedMethods: HttpMethod[] = [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'HEAD',
+      'OPTIONS',
+    ];
+
+    for (const method of supportedMethods) {
+      const match = this.fmw.find(method, path);
+      if (match) {
+        methods.push(method);
+      }
+    }
+
+    return [...new Set(methods)];
+  }
+
+  /**
+   * Retorna todas as rotas registradas (aproximação)
+   */
+  public getRoutes(): any[] {
+    // find-my-way não expõe rotas de forma simples, retorna uma representação do tree.
+    // @ts-expect-error - prettyPrint é uma função interna não tipada
+    return this.fmw.prettyPrint();
   }
 
   /**
    * Remove todas as rotas
    */
   public clear(): void {
-    this.routes = [];
+    this.fmw.reset();
     this.globalMiddleware = [];
+    this.routeCounter = 0;
   }
 
   /**
    * Número de rotas registradas
    */
   public get size(): number {
-    return this.routes.length;
+    return this.routeCounter;
   }
 }
 
