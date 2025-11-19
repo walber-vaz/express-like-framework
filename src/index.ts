@@ -56,6 +56,7 @@ export {
   createHtmlErrorHandler,
   errorBoundary,
 } from './utils/error-handler.js';
+export { type StringifyOptions, stringify } from './utils/json.js';
 export {
   createLogger,
   Logger,
