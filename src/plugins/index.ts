@@ -3,7 +3,14 @@ import { cors } from '../security/cors.js';
 import { helmet } from '../security/helmet.js';
 import { rateLimit } from '../security/rate-limit.js';
 import { logger, performanceLogger, requestLogger } from '../utils/logger.js';
-import type { Middleware, Plugin } from '../utils/types.js';
+import type {
+  Handler,
+  HttpMethod,
+  Middleware,
+  Plugin,
+  RequestContext,
+  ResponseContext,
+} from '../utils/types.js';
 
 /**
  * Plugin builder para facilitar criação de plugins
@@ -12,9 +19,9 @@ export class PluginBuilder {
   private _name: string;
   private _middleware: Middleware[] = [];
   private _routes: Array<{
-    method: string;
+    method: HttpMethod;
     path: string;
-    handler: any;
+    handler: Handler;
   }> = [];
   private _onInstall?: (app: Application) => void | Promise<void>;
 
@@ -33,7 +40,7 @@ export class PluginBuilder {
   /**
    * Adiciona rota ao plugin
    */
-  public route(method: string, path: string, handler: any): this {
+  public route(method: HttpMethod, path: string, handler: Handler): this {
     this._routes.push({ method, path, handler });
     return this;
   }
@@ -52,23 +59,24 @@ export class PluginBuilder {
   public build(): Plugin {
     return {
       name: this._name,
-      install: async (app: any) => {
+      install: async (app: unknown) => {
         logger.info(`Installing plugin: ${this._name}`);
+        const typedApp = app as Application;
 
         // Registra middleware
         for (const mw of this._middleware) {
-          app.use(mw);
+          typedApp.use(mw);
         }
 
         // Registra rotas
         for (const route of this._routes) {
-          const router = app.getRouter();
+          const router = typedApp.getRouter();
           router.addRoute(route.method, route.path, route.handler);
         }
 
         // Executa callback de instalação
         if (this._onInstall) {
-          await this._onInstall(app);
+          await this._onInstall(typedApp);
         }
 
         logger.info(`Plugin installed: ${this._name}`);
@@ -136,8 +144,8 @@ export const plugins = {
     const path = options?.path ?? '/health';
 
     return createPlugin('health-check')
-      .onInstall((app: any) => {
-        app.get(path, async (req: any, res: any) => {
+      .onInstall((app: Application) => {
+        app.get(path, async (req: RequestContext, res: ResponseContext) => {
           if (options?.customCheck) {
             const result = await options.customCheck();
             res.json(result);
@@ -175,8 +183,8 @@ export const plugins = {
 
         next();
       })
-      .onInstall((app: any) => {
-        app.get(path, (req: any, res: any) => {
+      .onInstall((app: Application) => {
+        app.get(path, (req: RequestContext, res: ResponseContext) => {
           res.json({
             uptime: Date.now() - metrics.startTime,
             requests: metrics.requests,
@@ -210,3 +218,4 @@ export const plugins = {
  * Re-export útil
  */
 export type { Plugin, PluginBuilder as PluginBuilderType };
+
