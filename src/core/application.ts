@@ -6,6 +6,8 @@ import type {
   InferSchemaType,
   Middleware,
   Plugin,
+  RequestContext,
+  ResponseContext,
   ValidationSchema,
 } from '../utils/types.js';
 import { HttpError, HttpStatus } from '../utils/types.js';
@@ -252,7 +254,7 @@ export class Application {
           }
 
           // Executa handler
-          await match.route.handler(req as any, res);
+          await match.route.handler(req, res);
           break;
         }
 
@@ -364,8 +366,8 @@ export class Application {
    */
   private _defaultErrorHandler(
     error: Error,
-    req: Request,
-    res: Response,
+    req: RequestContext,
+    res: ResponseContext,
   ): void {
     if (res.finished) {
       return;
