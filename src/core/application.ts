@@ -229,12 +229,36 @@ export class Application {
       // Tenta fazer match da rota
       const match = this.router.match(req.method, req.path);
 
-      if (!match) {
-        // Verifica se o path existe mas com outro método
-        if (this.router.hasPath(req.path)) {
-          const allowedMethods = this.router.getAllowedMethods(req.path);
-          res.header('allow', allowedMethods.join(', '));
+      switch (match.status) {
+        case 'MATCH': {
+          // Adiciona params à request
+          req.params = match.params;
 
+          // Valida schema se existir
+          if (match.route.schema) {
+            await this._validateSchema(req, match.route.schema);
+          }
+
+          // Executa middleware da rota
+          if (match.route.middleware.length > 0) {
+            const routeMiddleware = new MiddlewareChain();
+            routeMiddleware.useMany(match.route.middleware);
+            await routeMiddleware.execute(req, res);
+          }
+
+          // Se resposta já foi enviada por middleware, para aqui
+          if (res.finished) {
+            return;
+          }
+
+          // Executa handler
+          await match.route.handler(req as any, res);
+          break;
+        }
+
+        case 'METHOD_NOT_ALLOWED': {
+          const allowedMethods = match.allowedMethods ?? [];
+          res.header('allow', allowedMethods.join(', '));
           throw new HttpError(
             HttpStatus.METHOD_NOT_ALLOWED,
             `Method ${req.method} not allowed`,
@@ -242,37 +266,15 @@ export class Application {
           );
         }
 
-        // Rota não encontrada
-        throw new HttpError(
-          HttpStatus.NOT_FOUND,
-          `Route ${req.path} not found`,
-        );
+        case 'NOT_FOUND': {
+          throw new HttpError(
+            HttpStatus.NOT_FOUND,
+            `Route ${req.path} not found`,
+          );
+        }
       }
 
-      // Adiciona params à request
-      req.params = match.params;
-
-      // Valida schema se existir
-      if (match.route.schema) {
-        await this._validateSchema(req, match.route.schema);
-      }
-
-      // Executa middleware da rota
-      if (match.route.middleware.length > 0) {
-        const routeMiddleware = new MiddlewareChain();
-        routeMiddleware.useMany(match.route.middleware);
-        await routeMiddleware.execute(req, res);
-      }
-
-      // Se resposta já foi enviada por middleware, para aqui
-      if (res.finished) {
-        return;
-      }
-
-      // Executa handler
-      await match.route.handler(req as any, res);
-
-      // Se handler não enviou resposta, envia 404
+      // Se handler não enviou resposta, envia 204
       if (!res.finished) {
         res.status(HttpStatus.NO_CONTENT).send();
       }
