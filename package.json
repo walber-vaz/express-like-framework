@@ -1,21 +1,55 @@
 {
   "name": "like-express-node-typescript",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Modern, TypeScript-first web framework for Node.js - Express-like API with Zod validation, find-my-way routing, and built-in security",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch examples/basic.ts",
+    "dev:watch": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
+    "build:clean": "rm -rf dist && npm run build",
     "test": "node --test --experimental-strip-types tests/**/*.test.ts",
     "test:watch": "node --test --watch --experimental-strip-types tests/**/*.test.ts",
     "format": "biome format --write",
     "lint": "biome lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run test"
   },
-  "keywords": [],
+  "keywords": [
+    "framework",
+    "web",
+    "typescript",
+    "express",
+    "server",
+    "http",
+    "api",
+    "rest",
+    "validation",
+    "zod",
+    "router",
+    "middleware",
+    "esm"
+  ],
   "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/walber-vaz/express-like-framework.git"
+  },
+  "bugs": {
+    "url": "https://github.com/walber-vaz/express-like-framework/issues"
+  },
+  "homepage": "https://github.com/walber-vaz/express-like-framework#readme",
   "license": "BSD-3-Clause",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
