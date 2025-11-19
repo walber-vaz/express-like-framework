@@ -1,14 +1,10 @@
 {
-  "$schema": "https://www.schemastore.org/tsconfig",
+  "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Node 24",
   "_version": "24.0.0",
   "compilerOptions": {
     "lib": [
-      "es2024",
-      "ESNext.Array",
-      "ESNext.Collection",
-      "ESNext.Iterator",
-      "ESNext.Promise"
+      "es2024"
     ],
     "module": "nodenext",
     "target": "es2024",
@@ -21,9 +17,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "outDir": "./dist",
+    "rootDir": "./src"
   }
 }
