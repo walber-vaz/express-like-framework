@@ -42,6 +42,7 @@ export const HttpStatus = {
   // Redirection
   MOVED_PERMANENTLY: 301,
   FOUND: 302,
+  SEE_OTHER: 303,
   NOT_MODIFIED: 304,
 
   // Client Errors
