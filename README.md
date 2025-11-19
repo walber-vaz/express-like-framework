@@ -343,9 +343,11 @@ await app.plugin(plugins.metrics({
 
 ### Response Helpers
 
+> **🔐 Segurança:** Todas as respostas JSON têm escape automático de HTML (`<`, `>`, `&`) para prevenir ataques XSS quando o JSON é embutido em páginas HTML.
+
 ```typescript
 app.get('/api', (req, res) => {
-  // JSON
+  // JSON (com escape automático de HTML para prevenir XSS)
   res.json({ data: 'value' });
 
   // Text
@@ -461,6 +463,34 @@ app.get('/items', {
 ```
 
 ## 🔧 Configuração Avançada
+
+### JSON Stringify Seguro
+
+Para uso avançado de serialização JSON:
+
+```typescript
+import { stringify, type StringifyOptions } from 'like-express-node-typescript';
+
+// Com formatação
+const json = stringify({ foo: 'bar' }, {
+  space: 2,
+  escapeHtml: true
+});
+
+// Com replacer customizado
+const json = stringify(data, {
+  replacer: (key, value) => {
+    if (key === 'password') return undefined; // Remove senhas
+    return value;
+  },
+  escapeHtml: true
+});
+
+// Segurança: caracteres HTML são escapados
+const unsafe = { html: '<script>alert("XSS")</script>' };
+stringify(unsafe, { escapeHtml: true });
+// Resultado: {"html":"\u003cscript\u003ealert(\"XSS\")\u003c/script\u003e"}
+```
 
 ### Custom Error Handler
 
@@ -602,6 +632,7 @@ src/
 | Runtime | Node.js | 18+ |
 | Linguagem | TypeScript | 5.9+ |
 | Module System | ES Modules | Nativo |
+| Router | find-my-way | 9.3+ |
 | Validação | Zod | 3.24+ |
 | Test Runner | node:test | Nativo |
 | Linter/Formatter | Biome | Latest |
@@ -610,10 +641,11 @@ src/
 ### Princípios de Design
 
 1. **TypeScript-First**: Toda a API é projetada para máxima inferência de tipos
-2. **Zero Dependencies**: Apenas Zod como dependência externa (exceto devDependencies)
+2. **Mínimas Dependencies**: Apenas Zod (validação) e find-my-way (routing de alta performance)
 3. **Express-Compatible**: API familiar para fácil migração
 4. **Modern Node.js**: Aproveita recursos nativos (fetch, test runner, AsyncLocalStorage)
 5. **Seguro por Padrão**: Segurança não é opcional, é built-in
+6. **Alta Performance**: Router Radix Tree (find-my-way) com O(log n) lookup
 
 ## 📊 Status do Projeto
 
