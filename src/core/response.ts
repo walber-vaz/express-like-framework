@@ -1,4 +1,5 @@
 import type { ServerResponse } from 'node:http';
+import { stringify } from '../utils/json.js';
 import type {
   Headers,
   HttpStatusCode,
@@ -92,7 +93,10 @@ export class Response implements ResponseContext {
     this.type('application/json; charset=utf-8');
     this.body = data;
 
-    const json = JSON.stringify(data);
+    // Use the secure stringify function
+    const json = stringify(data, {
+      escapeHtml: true,
+    });
     this._send(json);
   }
 
