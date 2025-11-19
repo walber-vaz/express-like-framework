@@ -241,7 +241,7 @@ export class Response implements ResponseContext {
       cookie += `; Expires=${options.expires.toUTCString()}`;
     }
 
-    if (options.maxAge) {
+    if (options.maxAge !== undefined) {
       cookie += `; Max-Age=${options.maxAge}`;
     }
 
