@@ -121,6 +121,55 @@ app.listen(3000);
 
 ## 📚 Documentação
 
+### 📖 Referência Completa da API
+
+**[→ Ver API.md - Documentação Completa de Todas as Features](./API.md)**
+
+A documentação completa inclui:
+
+- Todos os métodos de Application, Router, Request, Response
+- Middleware utilities e composition helpers
+- Sistema de Context (AsyncLocalStorage)
+- Validação completa com Zod
+- Segurança (CORS, Helmet, Rate Limiting) com todos os presets
+- Sistema de Plugins
+- Error Handling completo
+- Logger e utilities
+- Types e constantes
+
+### 🎯 Guia Rápido por Categoria
+
+| Categoria | Features Principais | Documentação |
+|-----------|-------------------|--------------|
+| **Application** | `listen()`, `close()`, `use()`, `plugin()`, HTTP methods shortcuts | [API.md#application](./API.md#application) |
+| **Router** | Pattern matching, wildcards, params, `match()`, find-my-way | [API.md#router](./API.md#router) |
+| **Request** | `parseBody()`, `get()`, `ip()`, `hostname()`, `fullUrl()`, query/params | [API.md#request](./API.md#request) |
+| **Response** | `json()`, `text()`, `html()`, `send()`, `redirect()`, `cookie()`, status/headers | [API.md#response](./API.md#response) |
+| **Middleware** | `compose()`, `conditional()`, `onlyMethods()`, `onlyPaths()`, MiddlewareChain | [API.md#middleware](./API.md#middleware) |
+| **Context** | `getRequest()`, `getResponse()`, `getRequestId()`, `set()`, `get()`, AsyncLocalStorage | [API.md#context](./API.md#context) |
+| **Validation** | `validate()`, Zod schemas, `body()`, `params()`, `query()`, commonSchemas | [API.md#validation](./API.md#validation) |
+| **CORS** | Origin validation, credentials, presets (development, production, publicApi) | [API.md#cors](./API.md#cors) |
+| **Helmet** | Security headers, CSP, HSTS, presets (default, strict, development, minimal) | [API.md#helmet](./API.md#helmet) |
+| **Rate Limiting** | IP-based, user-based, route-based, presets (strict, moderate, relaxed, auth, create) | [API.md#rate-limiting](./API.md#rate-limiting) |
+| **Plugins** | `createPlugin()`, logging, security, healthCheck, metrics, bodyParser | [API.md#plugins](./API.md#plugins) |
+| **Error Handling** | `HttpError`, `createError.*`, `asyncHandler()`, error handlers | [API.md#error-handling](./API.md#error-handling) |
+| **Logger** | `debug()`, `info()`, `warn()`, `error()`, `requestLogger()`, `performanceLogger()` | [API.md#logger](./API.md#logger) |
+| **JSON** | `stringify()` with HTML escaping, XSS protection | [API.md#json-utilities](./API.md#json-utilities) |
+| **Types** | HttpStatus, HttpMethod, all interfaces and types | [API.md#types--constants](./API.md#types--constants) |
+
+### 📊 Features em Números
+
+- **140+ APIs públicas** documentadas
+- **15 categorias** de funcionalidades
+- **8 schemas comuns** pré-construídos
+- **12 presets** de segurança (CORS, Helmet, Rate Limiting)
+- **5 plugins built-in** prontos para uso
+- **13 helpers** de error handling
+- **18 constantes** de HTTP status
+- **100% type-safe** com TypeScript
+
+---
+
 ### Criando uma Aplicação
 
 ```typescript
