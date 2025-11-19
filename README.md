@@ -14,12 +14,53 @@ LikeExpress combina a familiaridade da API do Express com recursos modernos do N
 
 ## ✨ Características
 
-- 🚀 **TypeScript-First**: Tipagem forte e autocomplete perfeito
+### 🚀 TypeScript-First & Type Inference: Sua API Tipada Automaticamente
+
+LikeExpress leva o "TypeScript-First" a sério. Ao definir schemas de validação com Zod, sua aplicação não apenas valida os dados de entrada, mas também infere automaticamente os tipos corretos para `req.body`, `req.params` e `req.query` nos seus handlers. Isso significa:
+
+- **Segurança Total**: Seus dados de entrada sempre corresponderão aos seus tipos.
+- **DX Imbatível**: Autocomplete instantâneo e feedback de erros em tempo de desenvolvimento.
+- **Menos Boileplate**: Diga adeus às tipagens manuais de `req` e `res`.
+
+**Exemplo Mágico de Inferência de Tipos:**
+
+```typescript
+import { createApp, z } from 'like-express-node-typescript';
+
+const app = createApp();
+
+const getUserSchema = {
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  query: z.object({
+    include: z.enum(['profile', 'posts']).optional(),
+  }),
+} as const; // Crucial para a inferência de tipos!
+
+app.get('/users/:id', (req, res) => {
+  // ✨ req.params é automaticamente inferido como: { id: string }
+  const userId = req.params.id; // Autocomplete completo!
+
+  // ✨ req.query é automaticamente inferido como: { include?: "profile" | "posts" }
+  const includeData = req.query.include; // Tipagem precisa!
+
+  res.json({ userId, includeData });
+}, { schema: getUserSchema });
+
+app.listen().then(() => console.log('Servidor rodando com tipagem mágica! ✨'));
+```
+
+Com `LikeExpress`, seus handlers são sempre tipados e seguros, sem esforço extra!
+
+---
+
 - ⚡ **ES Modules Nativos**: Arquitetura moderna do Node.js
 - 🔋 **Baterias Inclusas**: Validação, segurança, logging built-in
 - 🎯 **API Familiar**: Se você conhece Express, já sabe usar
 - 🛡️ **Seguro por Padrão**: CORS, Helmet, Rate Limiting inclusos
 - 🔍 **Developer Experience**: Erros claros, debugging fácil
+
 
 ## 📋 Pré-requisitos
 
