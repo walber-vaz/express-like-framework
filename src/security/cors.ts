@@ -66,6 +66,13 @@ export function cors(options: CorsOptions = {}): Middleware {
     preflightContinue = false,
   } = options;
 
+  if (credentials && origin === '*') {
+    console.warn(
+      '[cors] Setting `origin: "*"` and `credentials: true` is not recommended by CORS specification. ' +
+        'Consider specifying a concrete origin or an array of origins when `credentials` is `true` for security reasons.',
+    );
+  }
+
   return (req, res, next) => {
     const requestOrigin = req.headers.origin as string | undefined;
 
