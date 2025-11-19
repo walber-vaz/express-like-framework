@@ -43,6 +43,8 @@ export class MemoryStore implements RateLimitStore {
         }
       }
     }, cleanupIntervalMs);
+    // Allow the process to exit even if this timer is active
+    this.cleanupInterval.unref();
   }
 
   public async increment(
@@ -58,11 +60,14 @@ export class MemoryStore implements RateLimitStore {
         resetTime: now + windowMs,
       };
     } else {
-      record.count++;
+      record = {
+        count: record.count + 1,
+        resetTime: record.resetTime,
+      };
     }
 
     this.store.set(key, record);
-    return record;
+    return { ...record };
   }
 
   /**
