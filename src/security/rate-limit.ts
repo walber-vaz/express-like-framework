@@ -1,72 +1,104 @@
-import type { Middleware, RequestContext } from '../utils/types.js';
+import type {
+  HttpStatusCode,
+  Middleware,
+  RequestContext,
+} from '../utils/types.js';
 import { HttpError, HttpStatus } from '../utils/types.js';
 
 /**
- * Store de rate limit requests
+ * The record of hits for a given key.
  */
-interface RateLimitStore {
+export interface RateLimitInfo {
   count: number;
-  resetTime: number;
+  resetTime: number; // Unix timestamp in ms
+}
+
+/**
+ * Defines the interface for a store used to track rate limit hits.
+ */
+export interface RateLimitStore {
+  /**
+   * Increments the hit count for a given key and returns the current count and reset time.
+   * @param key The identifier for a client.
+   * @param windowMs The duration of the rate limit window in milliseconds.
+   * @returns A promise that resolves to the rate limit info.
+   */
+  increment(key: string, windowMs: number): Promise<RateLimitInfo>;
+}
+
+/**
+ * A simple in-memory store for rate limiting.
+ * Not suitable for production environments with multiple processes.
+ */
+export class MemoryStore implements RateLimitStore {
+  private store = new Map<string, RateLimitInfo>();
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor(cleanupIntervalMs = 60 * 1000) {
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, value] of this.store.entries()) {
+        if (now > value.resetTime) {
+          this.store.delete(key);
+        }
+      }
+    }, cleanupIntervalMs);
+  }
+
+  public async increment(
+    key: string,
+    windowMs: number,
+  ): Promise<RateLimitInfo> {
+    const now = Date.now();
+    let record = this.store.get(key);
+
+    if (!record || now > record.resetTime) {
+      record = {
+        count: 1,
+        resetTime: now + windowMs,
+      };
+    } else {
+      record.count++;
+    }
+
+    this.store.set(key, record);
+    return record;
+  }
+
+  /**
+   * Clears the cleanup interval. Should be called when the server shuts down.
+   */
+  public shutdown(): void {
+    clearInterval(this.cleanupInterval);
+  }
 }
 
 /**
  * Opções de configuração do rate limiter
  */
 export interface RateLimitOptions {
-  /**
-   * Número máximo de requests permitidas na janela
-   */
   max?: number;
-
-  /**
-   * Janela de tempo em milissegundos
-   */
   windowMs?: number;
-
-  /**
-   * Mensagem de erro
-   */
   message?: string;
-
-  /**
-   * Status code da resposta
-   */
-  statusCode?: number;
-
-  /**
-   * Função para gerar a chave de identificação
-   */
+  statusCode?: HttpStatusCode;
   keyGenerator?: (req: RequestContext) => string;
-
-  /**
-   * Handler customizado quando limite é excedido
-   */
   handler?: (req: RequestContext) => void;
-
-  /**
-   * Skip rate limiting baseado em condição
-   */
   skip?: (req: RequestContext) => boolean;
-
-  /**
-   * Adiciona headers de rate limit na resposta
-   */
   standardHeaders?: boolean;
-
-  /**
-   * Adiciona headers legacy (X-RateLimit-*)
-   */
   legacyHeaders?: boolean;
+  /**
+   * The store to use for rate limiting. Defaults to an in-memory store.
+   */
+  store?: RateLimitStore;
 }
 
 /**
  * Middleware de rate limiting
- * Implementação simples em memória (não adequado para múltiplos processos)
  */
 export function rateLimit(options: RateLimitOptions = {}): Middleware {
   const {
     max = 100,
-    windowMs = 15 * 60 * 1000, // 15 minutos
+    windowMs = 15 * 60 * 1000,
     message = 'Too many requests, please try again later.',
     statusCode = HttpStatus.TOO_MANY_REQUESTS,
     keyGenerator = defaultKeyGenerator,
@@ -74,71 +106,46 @@ export function rateLimit(options: RateLimitOptions = {}): Middleware {
     skip,
     standardHeaders = true,
     legacyHeaders = false,
+    store = new MemoryStore(),
   } = options;
 
-  const store = new Map<string, RateLimitStore>();
-
-  // Cleanup expired entries periodicamente
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, value] of store.entries()) {
-      if (now > value.resetTime) {
-        store.delete(key);
+  return async (req, res, next) => {
+    try {
+      if (skip?.(req)) {
+        return next();
       }
-    }
-  }, windowMs);
 
-  return (req, res, next) => {
-    // Skip se função skip retornar true
-    if (skip && skip(req)) {
+      const key = keyGenerator(req);
+      const { count, resetTime } = await store.increment(key, windowMs);
+      const now = Date.now();
+
+      const remaining = Math.max(0, max - count);
+      const resetTimeSeconds = Math.ceil((resetTime - now) / 1000);
+
+      if (standardHeaders) {
+        res.header('ratelimit-limit', max.toString());
+        res.header('ratelimit-remaining', remaining.toString());
+        res.header('ratelimit-reset', resetTimeSeconds.toString());
+      }
+
+      if (legacyHeaders) {
+        res.header('x-ratelimit-limit', max.toString());
+        res.header('x-ratelimit-remaining', remaining.toString());
+        res.header('x-ratelimit-reset', resetTimeSeconds.toString());
+      }
+
+      if (count > max) {
+        res.header('retry-after', resetTimeSeconds.toString());
+        if (handler) {
+          handler(req);
+        }
+        throw new HttpError(statusCode, message);
+      }
+
       next();
-      return;
+    } catch (error) {
+      next(error as Error);
     }
-
-    const key = keyGenerator(req);
-    const now = Date.now();
-
-    let record = store.get(key);
-
-    // Inicializa ou reseta contador
-    if (!record || now > record.resetTime) {
-      record = {
-        count: 0,
-        resetTime: now + windowMs,
-      };
-      store.set(key, record);
-    }
-
-    record.count++;
-
-    const remaining = Math.max(0, max - record.count);
-    const resetTime = Math.ceil((record.resetTime - now) / 1000);
-
-    // Adiciona headers
-    if (standardHeaders) {
-      res.headers['ratelimit-limit'] = max.toString();
-      res.headers['ratelimit-remaining'] = remaining.toString();
-      res.headers['ratelimit-reset'] = resetTime.toString();
-    }
-
-    if (legacyHeaders) {
-      res.headers['x-ratelimit-limit'] = max.toString();
-      res.headers['x-ratelimit-remaining'] = remaining.toString();
-      res.headers['x-ratelimit-reset'] = resetTime.toString();
-    }
-
-    // Verifica limite
-    if (record.count > max) {
-      res.headers['retry-after'] = resetTime.toString();
-
-      if (handler) {
-        handler(req);
-      }
-
-      throw new HttpError(statusCode as any, message);
-    }
-
-    next();
   };
 }
 
@@ -165,50 +172,19 @@ function defaultKeyGenerator(req: RequestContext): string {
  * Rate limit presets comuns
  */
 export const rateLimitPresets = {
-  /**
-   * Limite estrito para APIs públicas
-   */
-  strict: (): Middleware =>
-    rateLimit({
-      max: 20,
-      windowMs: 15 * 60 * 1000, // 15 minutos
-    }),
-
-  /**
-   * Limite moderado
-   */
-  moderate: (): Middleware =>
-    rateLimit({
-      max: 100,
-      windowMs: 15 * 60 * 1000,
-    }),
-
-  /**
-   * Limite relaxado
-   */
-  relaxed: (): Middleware =>
-    rateLimit({
-      max: 1000,
-      windowMs: 15 * 60 * 1000,
-    }),
-
-  /**
-   * Limite para autenticação (previne brute force)
-   */
+  strict: (): Middleware => rateLimit({ max: 20, windowMs: 15 * 60 * 1000 }),
+  moderate: (): Middleware => rateLimit({ max: 100, windowMs: 15 * 60 * 1000 }),
+  relaxed: (): Middleware => rateLimit({ max: 1000, windowMs: 15 * 60 * 1000 }),
   auth: (): Middleware =>
     rateLimit({
       max: 5,
       windowMs: 15 * 60 * 1000,
       message: 'Too many authentication attempts, please try again later.',
     }),
-
-  /**
-   * Limite para criação de recursos
-   */
   create: (): Middleware =>
     rateLimit({
       max: 10,
-      windowMs: 60 * 1000, // 1 minuto
+      windowMs: 60 * 1000,
       message: 'Too many create requests, please slow down.',
     }),
 };
@@ -220,7 +196,6 @@ export function rateLimitByUser(options: RateLimitOptions = {}): Middleware {
   return rateLimit({
     ...options,
     keyGenerator: (req) => {
-      // Assume que existe um user ID na request
       const userId = (req as any).user?.id;
       return userId ? `user:${userId}` : defaultKeyGenerator(req);
     },
