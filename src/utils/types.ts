@@ -17,7 +17,7 @@ export type HttpMethod =
  * Parâmetros de rota extraídos da URL
  * Exemplo: /users/:id -> { id: string }
  */
-export type RouteParams = Record<string, string>;
+export type RouteParams = Record<string, string | undefined>;
 
 /**
  * Query parameters da URL
