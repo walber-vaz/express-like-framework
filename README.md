@@ -61,7 +61,6 @@ Com `LikeExpress`, seus handlers são sempre tipados e seguros, sem esforço ext
 - 🛡️ **Seguro por Padrão**: CORS, Helmet, Rate Limiting inclusos
 - 🔍 **Developer Experience**: Erros claros, debugging fácil
 
-
 ## 📋 Pré-requisitos
 
 - Node.js 18+ (para suporte a ES Modules, fetch nativo, e node:test)
@@ -691,7 +690,7 @@ Se você é uma instância de Claude Code ou outro assistente de IA trabalhando 
 
 ## 📝 Licença
 
-ISC
+[LICENSE](./LICENSE)
 
 ## 🙏 Agradecimentos
 
@@ -704,4 +703,9 @@ Inspirado por:
 
 ---
 
-**Feito com ❤️ e TypeScript**
+<!-- Colocar uma aviso que não pode ser usado em produção -->
+## Aviso
+
+**⚠️ AVISO IMPORTANTE ⚠️**
+
+Este framework está em estágio inicial de desenvolvimento e não deve ser usado em ambientes de produção. Muitas funcionalidades essenciais ainda estão em construção, e a API pode mudar significativamente. Use-o apenas para aprendizado e experimentação por enquanto.
