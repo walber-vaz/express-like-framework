@@ -36,6 +36,7 @@ export class Application {
       host: options.host ?? 'localhost',
       debug: options.debug ?? false,
       trustProxy: options.trustProxy ?? false,
+      maxBodySize: options.maxBodySize ?? 10 * 1024 * 1024, // 10MB default
       errorHandler:
         options.errorHandler ?? this._defaultErrorHandler.bind(this),
     };
@@ -206,7 +207,7 @@ export class Application {
     rawReq: IncomingMessage,
     rawRes: ServerResponse,
   ): Promise<void> {
-    const req = new Request(rawReq);
+    const req = new Request(rawReq, this._options.maxBodySize);
     const res = new Response(rawRes);
 
     try {

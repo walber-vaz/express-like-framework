@@ -32,6 +32,7 @@ export interface RateLimitStore {
  */
 export class MemoryStore implements RateLimitStore {
   private store = new Map<string, RateLimitInfo>();
+  private locks = new Map<string, Promise<void>>();
   private cleanupInterval: NodeJS.Timeout;
 
   constructor(cleanupIntervalMs = 60 * 1000) {
@@ -51,23 +52,43 @@ export class MemoryStore implements RateLimitStore {
     key: string,
     windowMs: number,
   ): Promise<RateLimitInfo> {
-    const now = Date.now();
-    let record = this.store.get(key);
-
-    if (!record || now > record.resetTime) {
-      record = {
-        count: 1,
-        resetTime: now + windowMs,
-      };
-    } else {
-      record = {
-        count: record.count + 1,
-        resetTime: record.resetTime,
-      };
+    // Wait for any existing lock on this key to release
+    while (this.locks.has(key)) {
+      await this.locks.get(key);
     }
 
-    this.store.set(key, record);
-    return { ...record };
+    // Create a new lock for this key
+    let releaseResolver: (() => void) | undefined;
+    const lockPromise = new Promise<void>((resolve) => {
+      releaseResolver = resolve;
+    });
+    this.locks.set(key, lockPromise);
+
+    try {
+      const now = Date.now();
+      let record = this.store.get(key);
+
+      if (!record || now > record.resetTime) {
+        record = {
+          count: 1,
+          resetTime: now + windowMs,
+        };
+      } else {
+        record = {
+          count: record.count + 1,
+          resetTime: record.resetTime,
+        };
+      }
+
+      this.store.set(key, record);
+      return { ...record };
+    } finally {
+      // Release the lock
+      this.locks.delete(key);
+      if (releaseResolver) {
+        releaseResolver();
+      }
+    }
   }
 
   /**
@@ -75,6 +96,8 @@ export class MemoryStore implements RateLimitStore {
    */
   public shutdown(): void {
     clearInterval(this.cleanupInterval);
+    this.store.clear();
+    this.locks.clear();
   }
 }
 
@@ -155,21 +178,49 @@ export function rateLimit(options: RateLimitOptions = {}): Middleware {
 }
 
 /**
- * Key generator padrão (baseado em IP)
+ * Valida se uma string é um IP válido (IPv4 ou IPv6)
+ */
+function isValidIp(ip: string): boolean {
+  // IPv4: xxx.xxx.xxx.xxx
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  // IPv6: xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx (simplified)
+  const ipv6Regex = /^([0-9a-fA-F]{0,4}:){7}[0-9a-fA-F]{0,4}$/;
+
+  if (ipv4Regex.test(ip)) {
+    // Validate each octet is 0-255
+    const octets = ip.split('.').map(Number);
+    return octets.every((octet) => octet >= 0 && octet <= 255);
+  }
+
+  return ipv6Regex.test(ip);
+}
+
+/**
+ * Key generator padrão (baseado em IP) com validação contra IP spoofing
  */
 function defaultKeyGenerator(req: RequestContext): string {
-  // Tenta pegar IP real considerando proxies
+  // Tenta pegar IP real considerando proxies (APENAS se trustProxy estiver habilitado)
+  // IMPORTANTE: Nunca confie em headers proxy sem configuração explícita
   const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    const forwardedString = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    return forwardedString.split(',')[0].trim();
+  if (forwarded && typeof forwarded === 'string') {
+    const ips = forwarded.split(',').map((ip) => ip.trim());
+    const firstIp = ips[0];
+
+    // Validar que o IP tem formato válido (proteção contra spoofing)
+    if (isValidIp(firstIp)) {
+      return firstIp;
+    }
   }
 
   const realIp = req.headers['x-real-ip'];
-  if (realIp) {
-    return Array.isArray(realIp) ? realIp[0] : realIp;
+  if (realIp && typeof realIp === 'string') {
+    // Validar formato do IP
+    if (isValidIp(realIp)) {
+      return realIp;
+    }
   }
 
+  // Fallback para o IP do socket (sempre confiável)
   return req.raw.socket.remoteAddress || 'unknown';
 }
 

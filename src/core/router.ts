@@ -44,6 +44,7 @@ export class Router {
   private fmw: FindMyWay.Instance<FindMyWay.HTTPVersion.V1>;
   private globalMiddleware: Middleware[] = [];
   private routeCounter = 0;
+  private methodCache = new Map<string, HttpMethod[]>();
 
   constructor() {
     this.fmw = FindMyWay({
@@ -86,6 +87,10 @@ export class Router {
     // The actual execution happens in `application.ts` with the correct types.
     this.fmw.on(method, path, handler as any, store);
     this.routeCounter++;
+
+    // Invalidar cache para este path
+    this.methodCache.delete(path);
+
     return this;
   }
 
@@ -184,10 +189,16 @@ export class Router {
   }
 
   /**
-   * Retorna todos os métodos HTTP disponíveis para um path.
+   * Retorna todos os métodos HTTP disponíveis para um path (com cache para performance).
    * NOTA: find-my-way não otimiza para isso. A implementação é para compatibilidade.
    */
   public getAllowedMethods(path: string): HttpMethod[] {
+    // Verificar cache primeiro
+    const cached = this.methodCache.get(path);
+    if (cached) {
+      return cached;
+    }
+
     const methods: HttpMethod[] = [];
     const supportedMethods: HttpMethod[] = [
       'GET',
@@ -206,7 +217,12 @@ export class Router {
       }
     }
 
-    return [...new Set(methods)];
+    const uniqueMethods = [...new Set(methods)];
+
+    // Cachear resultado
+    this.methodCache.set(path, uniqueMethods);
+
+    return uniqueMethods;
   }
 
   /**
@@ -225,6 +241,7 @@ export class Router {
     this.fmw.reset();
     this.globalMiddleware = [];
     this.routeCounter = 0;
+    this.methodCache.clear();
   }
 
   /**

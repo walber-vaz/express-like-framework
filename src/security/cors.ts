@@ -130,7 +130,7 @@ export function cors(options: CorsOptions = {}): Middleware {
 }
 
 /**
- * Verifica se origin é permitida
+ * Verifica se origin é permitida (com normalização case-insensitive para prevenir bypass)
  */
 function isOriginAllowed(
   requestOrigin: string | undefined,
@@ -150,24 +150,38 @@ function isOriginAllowed(
     return '*';
   }
 
+  // Normalizar para lowercase para comparação segura (previne bypass via case variation)
+  const normalizedRequestOrigin = requestOrigin.toLowerCase();
+
   // String única
   if (typeof allowedOrigin === 'string') {
-    return allowedOrigin === requestOrigin ? requestOrigin : null;
+    return allowedOrigin.toLowerCase() === normalizedRequestOrigin
+      ? requestOrigin
+      : null;
   }
 
   // Array de strings
   if (Array.isArray(allowedOrigin)) {
-    return allowedOrigin.includes(requestOrigin) ? requestOrigin : null;
+    const found = allowedOrigin.find(
+      (origin) => origin.toLowerCase() === normalizedRequestOrigin,
+    );
+    return found ? requestOrigin : null;
   }
 
-  // RegExp
+  // RegExp (mantém original para dar controle total ao desenvolvedor)
   if (allowedOrigin instanceof RegExp) {
     return allowedOrigin.test(requestOrigin) ? requestOrigin : null;
   }
 
   // Função customizada
   if (typeof allowedOrigin === 'function') {
-    return allowedOrigin(requestOrigin) ? requestOrigin : null;
+    const result = allowedOrigin(requestOrigin);
+    // Validar que função não retorna valores perigosos
+    if (typeof result !== 'boolean') {
+      console.warn('[CORS] Invalid return type from origin function, expected boolean');
+      return null;
+    }
+    return result ? requestOrigin : null;
   }
 
   return null;

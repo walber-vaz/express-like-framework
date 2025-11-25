@@ -22,11 +22,13 @@ export class Request implements RequestContext {
   public raw: IncomingMessage;
 
   private _parsedUrl: URL | null = null;
+  private _maxBodySize: number;
 
-  constructor(req: IncomingMessage) {
+  constructor(req: IncomingMessage, maxBodySize = 10 * 1024 * 1024) {
     this.raw = req;
     this.method = (req.method?.toUpperCase() || 'GET') as HttpMethod;
     this.url = req.url || '/';
+    this._maxBodySize = maxBodySize;
 
     // Parse URL e query params
     this._parseUrl();
@@ -86,7 +88,7 @@ export class Request implements RequestContext {
   }
 
   /**
-   * Parse body JSON
+   * Parse body JSON com proteção contra payloads grandes
    */
   public async parseBody(): Promise<unknown> {
     if (this.body !== undefined) {
@@ -94,14 +96,32 @@ export class Request implements RequestContext {
     }
 
     return new Promise((resolve, reject) => {
-      let data = '';
+      const chunks: Buffer[] = [];
+      let totalSize = 0;
 
-      this.raw.on('data', (chunk) => {
-        data += chunk.toString();
+      this.raw.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+        totalSize += chunk.length;
+
+        // Proteção contra payloads muito grandes (DoS protection)
+        if (totalSize > this._maxBodySize) {
+          this.raw.destroy();
+          reject(
+            new HttpError(
+              HttpStatus.REQUEST_TOO_LARGE,
+              `Payload too large. Maximum size is ${this._maxBodySize} bytes`,
+            ),
+          );
+          return;
+        }
       });
 
       this.raw.on('end', () => {
         try {
+          // Usar Buffer.concat ao invés de string concatenation (O(n) ao invés de O(n²))
+          const buffer = Buffer.concat(chunks);
+          const data = buffer.toString('utf-8');
+
           const contentType = this.get('content-type');
 
           if (contentType?.includes('application/json')) {

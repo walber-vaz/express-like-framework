@@ -52,6 +52,7 @@ export const HttpStatus = {
   NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
   CONFLICT: 409,
+  REQUEST_TOO_LARGE: 413,
   UNPROCESSABLE_ENTITY: 422,
   TOO_MANY_REQUESTS: 429,
 
@@ -203,6 +204,11 @@ export interface ApplicationOptions {
    * Trust proxy headers (X-Forwarded-*)
    */
   trustProxy?: boolean;
+
+  /**
+   * Tamanho máximo do body em bytes (padrão: 10MB)
+   */
+  maxBodySize?: number;
 }
 
 /**
