@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { SecureContextOptions } from 'node:tls';
 import type { ZodSchema } from 'zod';
 
 /**
@@ -51,6 +52,7 @@ export const HttpStatus = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
+  REQUEST_TIMEOUT: 408,
   CONFLICT: 409,
   REQUEST_TOO_LARGE: 413,
   UNPROCESSABLE_ENTITY: 422,
@@ -220,6 +222,29 @@ export interface ApplicationOptions {
    * Tamanho máximo do body em bytes (padrão: 10MB)
    */
   maxBodySize?: number;
+
+  /**
+   * Timeout da request em millisegundos (padrão: 120000ms = 2 minutos)
+   */
+  requestTimeout?: number;
+
+  /**
+   * Opções de TLS/SSL para HTTPS
+   * Quando fornecido, o servidor rodará em HTTPS ao invés de HTTP
+   *
+   * @example
+   * ```typescript
+   * import { readFileSync } from 'fs';
+   *
+   * const app = createApp({
+   *   tls: {
+   *     key: readFileSync('private-key.pem'),
+   *     cert: readFileSync('certificate.pem')
+   *   }
+   * });
+   * ```
+   */
+  tls?: SecureContextOptions;
 }
 
 /**

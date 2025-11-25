@@ -58,6 +58,12 @@ export {
 } from './utils/error-handler.js';
 export { type StringifyOptions, stringify } from './utils/json.js';
 export {
+  type MultipartOptions,
+  type MultipartResult,
+  parseMultipart,
+  type UploadedFile,
+} from './utils/multipart.js';
+export {
   createLogger,
   Logger,
   type LoggerOptions,

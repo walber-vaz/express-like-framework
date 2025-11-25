@@ -1,5 +1,10 @@
 import type { IncomingMessage } from 'node:http';
 import type {
+  MultipartOptions,
+  MultipartResult,
+} from '../utils/multipart.js';
+import { parseMultipart } from '../utils/multipart.js';
+import type {
   Headers,
   HttpMethod,
   QueryParams,
@@ -267,5 +272,33 @@ export class Request implements RequestContext {
    */
   public fullUrl(trustProxy = false): string {
     return `${this.protocol(trustProxy)}://${this.hostname()}${this.url}`;
+  }
+
+  /**
+   * Parse multipart/form-data (file uploads)
+   *
+   * @example
+   * ```typescript
+   * app.post('/upload', async (req, res) => {
+   *   const { fields, files } = await req.parseMultipart({
+   *     limits: { fileSize: 5 * 1024 * 1024 }
+   *   });
+   *
+   *   res.json({ uploaded: files.length });
+   * });
+   * ```
+   */
+  public async parseMultipart(
+    options?: MultipartOptions,
+  ): Promise<MultipartResult> {
+    const contentType = this.get('content-type') || '';
+    if (!contentType.includes('multipart/form-data')) {
+      throw new HttpError(
+        HttpStatus.BAD_REQUEST,
+        'Content-Type must be multipart/form-data',
+      );
+    }
+
+    return parseMultipart(this.raw, options);
   }
 }

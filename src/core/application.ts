@@ -1,5 +1,8 @@
-import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { createServer } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createServer as createHttpServer } from 'node:http';
+import type { Server as HttpServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
+import type { Server as HttpsServer } from 'node:https';
 import type {
   ApplicationOptions,
   Handler,
@@ -22,8 +25,10 @@ import { Router } from './router.js';
  */
 export class Application {
   private router: Router;
-  private server: Server | null = null;
-  private _options: Required<ApplicationOptions>;
+  private server: HttpServer | HttpsServer | null = null;
+  private _options: Required<Omit<ApplicationOptions, 'tls'>> & {
+    tls?: ApplicationOptions['tls'];
+  };
   private plugins: Plugin[] = [];
   private globalMiddleware: MiddlewareChain;
   private started = false;
@@ -38,6 +43,8 @@ export class Application {
       debug: options.debug ?? false,
       trustProxy: options.trustProxy ?? false,
       maxBodySize: options.maxBodySize ?? 10 * 1024 * 1024, // 10MB default
+      requestTimeout: options.requestTimeout ?? 120000, // 2 minutos default
+      tls: options.tls, // Opcional - se fornecido, usa HTTPS
       errorHandler:
         options.errorHandler ?? this._defaultErrorHandler.bind(this),
     };
@@ -399,9 +406,12 @@ export class Application {
   }
 
   /**
-   * Inicia o servidor
+   * Inicia o servidor (HTTP ou HTTPS baseado nas opções)
    */
-  public async listen(port?: number, host?: string): Promise<Server> {
+  public async listen(
+    port?: number,
+    host?: string,
+  ): Promise<HttpServer | HttpsServer> {
     if (this.started) {
       throw new Error('Server already started');
     }
@@ -409,16 +419,41 @@ export class Application {
     const finalPort = port ?? this._options.port;
     const finalHost = host ?? this._options.host;
 
-    this.server = createServer((req, res) => {
+    // Handler de requisições (mesmo para HTTP e HTTPS)
+    const requestHandler = (req: IncomingMessage, res: ServerResponse) => {
+      // Configurar timeout da request
+      req.setTimeout(this._options.requestTimeout);
+
+      req.on('timeout', () => {
+        if (!res.headersSent) {
+          res.statusCode = 408; // Request Timeout
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              error: 'Request Timeout',
+              statusCode: 408,
+              message: `Request exceeded ${this._options.requestTimeout}ms timeout`,
+            }),
+          );
+        }
+        req.destroy();
+      });
+
       this._handleRequest(req, res).catch((error) => {
         console.error('Unhandled error in request handler:', error);
       });
-    });
+    };
+
+    // Criar servidor HTTP ou HTTPS baseado em opções
+    this.server = this._options.tls
+      ? createHttpsServer(this._options.tls, requestHandler)
+      : createHttpServer(requestHandler);
 
     return new Promise((resolve, reject) => {
       this.server!.listen(finalPort, finalHost, () => {
         this.started = true;
-        console.log(`Server listening on http://${finalHost}:${finalPort}`);
+        const protocol = this._options.tls ? 'https' : 'http';
+        console.log(`Server listening on ${protocol}://${finalHost}:${finalPort}`);
         resolve(this.server!);
       });
 
@@ -450,16 +485,16 @@ export class Application {
   }
 
   /**
-   * Retorna o servidor HTTP nativo
+   * Retorna o servidor HTTP/HTTPS nativo
    */
-  public getServer(): Server | null {
+  public getServer(): HttpServer | HttpsServer | null {
     return this.server;
   }
 
   /**
    * Retorna as opções da aplicação
    */
-  public getOptions(): Required<ApplicationOptions> {
+  public getOptions(): typeof this._options {
     return { ...this._options };
   }
 
