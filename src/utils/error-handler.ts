@@ -59,7 +59,7 @@ export function createHtmlErrorHandler(options: {
 }): ErrorHandler {
   const { debug = false } = options;
 
-  return (error: Error, req: RequestContext, res: ResponseContext) => {
+  return (error: Error, _req: RequestContext, res: ResponseContext) => {
     if (res.raw.headersSent) {
       return;
     }

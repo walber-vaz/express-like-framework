@@ -76,7 +76,7 @@ export function helmet(options: HelmetOptions = {}): Middleware {
     xssFilter = true,
   } = options;
 
-  return (req, res, next) => {
+  return (_req, res, next) => {
     // Hide X-Powered-By
     if (hidePoweredBy) {
       delete res.headers['x-powered-by'];

@@ -1,4 +1,9 @@
-import { createApp, z } from '../dist/index.js';
+import {
+  type RequestContext,
+  type ResponseContext,
+  createApp,
+  z,
+} from '../dist/index.js';
 
 const app = createApp({ port: 3003 });
 
@@ -91,7 +96,7 @@ app.put(
 /**
  * Exemplo 4: Sem schema = tipos genéricos (retrocompatibilidade)
  */
-app.get('/legacy', (req, res) => {
+app.get('/legacy', (_req: RequestContext, res: ResponseContext) => {
   // req.body: unknown
   // req.params: Record<string, string>
   // req.query: Record<string, string | string[]>

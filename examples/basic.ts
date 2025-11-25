@@ -20,7 +20,7 @@ app.use(cors());
 app.use(helmet());
 
 // Rota simples
-app.get('/', (req: RequestContext, res: ResponseContext) => {
+app.get('/', (_req: RequestContext, res: ResponseContext) => {
   res.json({ message: 'Hello from LikeExpress!' });
 });
 
@@ -51,7 +51,7 @@ app.post(
     logger.info('Creating user:', user);
 
     // Autocomplete funciona perfeitamente:
-    console.log(user.name, user.email, user.age);
+    console.log(user?.name, user?.email, user?.age);
 
     res.status(201).json({
       message: 'User created',

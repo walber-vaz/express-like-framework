@@ -145,7 +145,7 @@ export const plugins = {
 
     return createPlugin('health-check')
       .onInstall((app: Application) => {
-        app.get(path, async (req: RequestContext, res: ResponseContext) => {
+        app.get(path, async (_req: RequestContext, res: ResponseContext) => {
           if (options?.customCheck) {
             const result = await options.customCheck();
             res.json(result);
@@ -169,7 +169,7 @@ export const plugins = {
     };
 
     return createPlugin('metrics')
-      .middleware((req, res, next) => {
+      .middleware((_req, res, next) => {
         metrics.requests++;
 
         const originalEnd = res.raw.end;
@@ -184,7 +184,7 @@ export const plugins = {
         next();
       })
       .onInstall((app: Application) => {
-        app.get(path, (req: RequestContext, res: ResponseContext) => {
+        app.get(path, (_req: RequestContext, res: ResponseContext) => {
           res.json({
             uptime: Date.now() - metrics.startTime,
             requests: metrics.requests,
@@ -206,7 +206,7 @@ export const plugins = {
    */
   bodyParser: (): Plugin => {
     return createPlugin('body-parser')
-      .middleware((req, res, next) => {
+      .middleware((_req, _res, next) => {
         // Body parsing já é automático - apenas passa adiante
         next();
       })

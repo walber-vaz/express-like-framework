@@ -109,7 +109,7 @@ export const context = new ContextManager();
  * Middleware para adicionar request ID aos headers
  */
 export function requestIdMiddleware() {
-  return (req: RequestContext, res: ResponseContext, next: () => void) => {
+  return (_req: RequestContext, res: ResponseContext, next: () => void) => {
     const requestId = context.getRequestId();
     if (requestId) {
       res.headers['x-request-id'] = requestId;
@@ -122,7 +122,7 @@ export function requestIdMiddleware() {
  * Middleware para logging de performance
  */
 export function performanceMiddleware() {
-  return (req: RequestContext, res: ResponseContext, next: () => void) => {
+  return (_req: RequestContext, res: ResponseContext, next: () => void) => {
     const elapsed = context.getElapsedTime();
     if (elapsed !== undefined) {
       res.headers['x-response-time'] = `${elapsed}ms`;
