@@ -64,8 +64,14 @@ describe('Rate Limit', () => {
       // Request 3 - should be blocked
       await middleware(req, res, next);
       assert.ok(errorThrown);
-      assert.strictEqual((errorThrown as any).statusCode, HttpStatus.TOO_MANY_REQUESTS);
-      assert.strictEqual(errorThrown.message, 'Too many requests, please try again later.');
+      assert.strictEqual(
+        (errorThrown as any).statusCode,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+      assert.strictEqual(
+        errorThrown.message,
+        'Too many requests, please try again later.',
+      );
       assert.ok(res.headers['retry-after']);
 
       store.shutdown();
@@ -99,7 +105,10 @@ describe('Rate Limit', () => {
       // Second request - blocked
       await middleware(req, res, next);
       assert.ok(errorThrown);
-      assert.strictEqual((errorThrown as any).statusCode, HttpStatus.SERVICE_UNAVAILABLE);
+      assert.strictEqual(
+        (errorThrown as any).statusCode,
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
       assert.strictEqual(errorThrown.message, customMessage);
 
       store.shutdown();
@@ -780,7 +789,11 @@ describe('Rate Limit', () => {
       const req = new Request(mockReq);
       const res = new Response(mockRes);
 
-      const middleware = rateLimit({ max: 2, windowMs: 60000, store: customStore });
+      const middleware = rateLimit({
+        max: 2,
+        windowMs: 60000,
+        store: customStore,
+      });
 
       let errorThrown: Error | undefined;
       const next = (error?: Error) => {
