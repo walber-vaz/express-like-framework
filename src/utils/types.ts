@@ -156,6 +156,17 @@ export interface ValidationSchema {
 }
 
 /**
+ * Type helper para validar que schema usa 'as const'
+ * Gera erro claro se 'as const' não for usado
+ */
+export type ValidatedSchema<T> = T extends { readonly [K in keyof T]: T[K] }
+  ? T
+  : {
+      __error: "⚠️ Schema must use 'as const' for type inference. Add 'as const' after schema definition.";
+      __example: 'const schema = { body: z.object({...}) } as const;';
+    };
+
+/**
  * Type helpers para inferir tipos do schema
  */
 export type InferSchemaType<T extends ValidationSchema> = {

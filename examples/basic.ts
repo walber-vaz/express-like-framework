@@ -5,7 +5,6 @@ import {
   logger,
   type RequestContext,
   type ResponseContext,
-  validate,
   z,
 } from '../dist/index.js';
 
@@ -58,7 +57,7 @@ app.post(
       user,
     });
   },
-  { middleware: [validate(createUserSchema)], schema: createUserSchema },
+  { schema: createUserSchema }, // Schema implica validação automática!
 );
 
 // Rota com query params

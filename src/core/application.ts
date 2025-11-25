@@ -11,6 +11,7 @@ import type {
   ValidationSchema,
 } from '../utils/types.js';
 import { HttpError, HttpStatus } from '../utils/types.js';
+import { formatValidationErrorForHttp } from '../validation/index.js';
 import { MiddlewareChain } from './middleware.js';
 import { Request } from './request.js';
 import { Response } from './response.js';
@@ -287,7 +288,7 @@ export class Application {
   }
 
   /**
-   * Valida schema da request
+   * Valida schema da request com mensagens HTTP-friendly
    */
   private async _validateSchema(
     req: Request,
@@ -296,10 +297,11 @@ export class Application {
     if (schema.body) {
       const result = schema.body.safeParse(req.body);
       if (!result.success) {
+        const formatted = formatValidationErrorForHttp(result.error);
         throw new HttpError(
           HttpStatus.BAD_REQUEST,
-          'Invalid request body',
-          result.error.errors,
+          formatted.message,
+          formatted.errors,
         );
       }
       req.body = result.data;
@@ -308,10 +310,11 @@ export class Application {
     if (schema.params) {
       const result = schema.params.safeParse(req.params);
       if (!result.success) {
+        const formatted = formatValidationErrorForHttp(result.error);
         throw new HttpError(
           HttpStatus.BAD_REQUEST,
-          'Invalid route params',
-          result.error.errors,
+          formatted.message,
+          formatted.errors,
         );
       }
       req.params = result.data;
@@ -320,10 +323,11 @@ export class Application {
     if (schema.query) {
       const result = schema.query.safeParse(req.query);
       if (!result.success) {
+        const formatted = formatValidationErrorForHttp(result.error);
         throw new HttpError(
           HttpStatus.BAD_REQUEST,
-          'Invalid query params',
-          result.error.errors,
+          formatted.message,
+          formatted.errors,
         );
       }
       req.query = result.data;
@@ -332,10 +336,11 @@ export class Application {
     if (schema.headers) {
       const result = schema.headers.safeParse(req.headers);
       if (!result.success) {
+        const formatted = formatValidationErrorForHttp(result.error);
         throw new HttpError(
           HttpStatus.BAD_REQUEST,
-          'Invalid headers',
-          result.error.errors,
+          formatted.message,
+          formatted.errors,
         );
       }
       req.headers = result.data;

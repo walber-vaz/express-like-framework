@@ -4,6 +4,8 @@ import { HttpError, HttpStatus } from '../utils/types.js';
 
 /**
  * Cria um middleware de validação a partir de schemas Zod
+ * NOTA: Quando você usa { schema } nas rotas, a validação é automática!
+ * Este middleware é opcional para casos especiais.
  */
 export function validate(schema: ValidationSchema): Middleware {
   return async (req, res, next) => {
@@ -12,10 +14,11 @@ export function validate(schema: ValidationSchema): Middleware {
       if (schema.body) {
         const result = schema.body.safeParse(req.body);
         if (!result.success) {
+          const formatted = formatValidationErrorForHttp(result.error);
           throw new HttpError(
             HttpStatus.BAD_REQUEST,
-            'Invalid request body',
-            formatZodError(result.error),
+            formatted.message,
+            formatted.errors,
           );
         }
         req.body = result.data;
@@ -25,10 +28,11 @@ export function validate(schema: ValidationSchema): Middleware {
       if (schema.params) {
         const result = schema.params.safeParse(req.params);
         if (!result.success) {
+          const formatted = formatValidationErrorForHttp(result.error);
           throw new HttpError(
             HttpStatus.BAD_REQUEST,
-            'Invalid route parameters',
-            formatZodError(result.error),
+            formatted.message,
+            formatted.errors,
           );
         }
         req.params = result.data;
@@ -38,10 +42,11 @@ export function validate(schema: ValidationSchema): Middleware {
       if (schema.query) {
         const result = schema.query.safeParse(req.query);
         if (!result.success) {
+          const formatted = formatValidationErrorForHttp(result.error);
           throw new HttpError(
             HttpStatus.BAD_REQUEST,
-            'Invalid query parameters',
-            formatZodError(result.error),
+            formatted.message,
+            formatted.errors,
           );
         }
         req.query = result.data;
@@ -51,10 +56,11 @@ export function validate(schema: ValidationSchema): Middleware {
       if (schema.headers) {
         const result = schema.headers.safeParse(req.headers);
         if (!result.success) {
+          const formatted = formatValidationErrorForHttp(result.error);
           throw new HttpError(
             HttpStatus.BAD_REQUEST,
-            'Invalid headers',
-            formatZodError(result.error),
+            formatted.message,
+            formatted.errors,
           );
         }
         req.headers = result.data;
@@ -76,6 +82,24 @@ export function formatZodError(error: ZodError): unknown {
     message: err.message,
     code: err.code,
   }));
+}
+
+/**
+ * Formata erro de validação para resposta HTTP-friendly
+ * Usado pela Application para retornar erros consistentes
+ */
+export function formatValidationErrorForHttp(error: ZodError): {
+  message: string;
+  errors: Array<{ field: string; message: string; code: string }>;
+} {
+  return {
+    message: 'Validation failed',
+    errors: error.errors.map((err) => ({
+      field: err.path.join('.') || 'root',
+      message: err.message,
+      code: err.code,
+    })),
+  };
 }
 
 /**

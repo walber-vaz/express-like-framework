@@ -80,7 +80,7 @@ describe('Validation', () => {
 
       assert.ok(error instanceof HttpError);
       assert.strictEqual(error.statusCode, HttpStatus.BAD_REQUEST);
-      assert.strictEqual(error.message, 'Invalid request body');
+      assert.strictEqual(error.message, 'Validation failed');
       assert.ok(error.details);
     });
 
@@ -140,7 +140,7 @@ describe('Validation', () => {
 
       assert.ok(error instanceof HttpError);
       assert.strictEqual(error.statusCode, HttpStatus.BAD_REQUEST);
-      assert.strictEqual(error.message, 'Invalid route parameters');
+      assert.strictEqual(error.message, 'Validation failed');
     });
 
     test('should validate query successfully', async () => {
@@ -197,7 +197,7 @@ describe('Validation', () => {
 
       assert.ok(error instanceof HttpError);
       assert.strictEqual(error.statusCode, HttpStatus.BAD_REQUEST);
-      assert.strictEqual(error.message, 'Invalid query parameters');
+      assert.strictEqual(error.message, 'Validation failed');
     });
 
     test('should validate headers successfully', async () => {
@@ -254,7 +254,7 @@ describe('Validation', () => {
 
       assert.ok(error instanceof HttpError);
       assert.strictEqual(error.statusCode, HttpStatus.BAD_REQUEST);
-      assert.strictEqual(error.message, 'Invalid headers');
+      assert.strictEqual(error.message, 'Validation failed');
     });
 
     test('should validate multiple schemas at once', async () => {

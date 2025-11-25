@@ -83,6 +83,7 @@ export {
   type ResponseContext,
   type Route,
   type RouteParams,
+  type ValidatedSchema,
   type ValidationSchema,
 } from './utils/types.js';
 // Validation exports
@@ -90,6 +91,7 @@ export {
   body,
   combine,
   commonSchemas,
+  formatValidationErrorForHttp,
   formatZodError,
   headers,
   params,
